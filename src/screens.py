@@ -318,9 +318,13 @@ class GameOverScreen:
         self.t += 1
         for ev in events:
             if ev.type == pygame.KEYDOWN:
+                if ev.key == pygame.K_ESCAPE:
+                    return "menu"
+                    
                 if not self.name_done:
                     if ev.key == pygame.K_RETURN:
-                        self.name_done = True
+                        if len(self.name_input.strip()) > 0:
+                            self.name_done = True
                     elif ev.key == pygame.K_BACKSPACE:
                         self.name_input = self.name_input[:-1]
                     elif len(self.name_input) < self.MAX_NAME_LEN:
@@ -330,8 +334,6 @@ class GameOverScreen:
                 else:
                     if ev.key in (pygame.K_RETURN, pygame.K_SPACE):
                         return "restart"
-                    if ev.key == pygame.K_ESCAPE:
-                        return "menu"
         return None
 
     def draw(self, surf, score, highscore, wave, kills, shots, max_combo, new_record):
@@ -377,7 +379,7 @@ class GameOverScreen:
         y0 += 14
         if not self.name_done:
             prompt_col = C_CYAN if (self.t // 20) % 2 == 0 else C_WHITE
-            draw_text_centered(surf, "Entrez votre nom :", self.fonts["small"], C_WHITE, y0)
+            draw_text_centered(surf, "Entrez votre nom : ", self.fonts["small"], C_WHITE, y0)
             y0 += 26
             display_name = self.name_input + ("|" if (self.t // 15) % 2 == 0 else " ")
             draw_glow_rect(surf, C_DARK_GREY, (SCREEN_W//2 - 100, y0 - 4, 200, 32),
@@ -385,7 +387,10 @@ class GameOverScreen:
             draw_neon_text(surf, display_name or " ", self.fonts["medium"],
                            prompt_col, SCREEN_W//2, y0 + 12)
             y0 += 42
-            draw_text_centered(surf, "ENTRÉE pour confirmer (laisser vide pour ne pas sauver)", self.fonts["tiny"], C_GREY, y0)
+            if len(self.name_input.strip()) > 0:
+                draw_text_centered(surf, "ENTRÉE pour confirmer le score", self.fonts["tiny"], C_CYAN, y0)
+            else:
+                draw_text_centered(surf, "Veuillez entrer un nom", self.fonts["tiny"], C_RED, y0)
         else:
             if self.submitted:
                 draw_text_centered(surf, f"✓ {self.name_input} — score soumis !",
