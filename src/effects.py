@@ -16,7 +16,7 @@ class StarField:
         return [
             x if x is not None else SCREEN_W,
             random.randint(0, SCREEN_H),
-            random.uniform(0.3, 3.0),
+            random.uniform(0.3, 3.0),-
             random.randint(1, 3),
         ]
 
