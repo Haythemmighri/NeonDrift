@@ -43,3 +43,10 @@ SCORE_BOSS     = 500
 
 HIGHSCORE_FILE = "highscore.json"
 SETTINGS_FILE  = "settings.json"
+
+# Konnect Payment Config
+KONNECT_WALLET_ID = "68036ba4c4f4ab1d9ffb00ef"
+KONNECT_API_KEY = "68036ba4c4f4ab1d9ffb00e7:TZYBj46FXgRwyF9A8x5Df2vIenLMaBZ"
+KONNECT_INIT_URL = "https://api.preprod.konnect.network/api/v2/payments/init-payment"
+KONNECT_STATUS_URL = "https://api.preprod.konnect.network/api/v2/payments/"
+MAX_FREE_PLAYS = 3

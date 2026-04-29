@@ -2,9 +2,11 @@
 import pygame
 import math
 import random
+import webbrowser
 
 from src.constants import *
 from src.utils import draw_neon_text, draw_text_centered, draw_glow_circle, draw_glow_rect
+from src.payment import init_payment, check_payment_status
 
 
 class MenuScreen:
@@ -49,7 +51,7 @@ class MenuScreen:
                     action = ("start", self.DIFF_SPEEDS[self.selected])
         return action
 
-    def draw(self, surf, stars, nebula):
+    def draw(self, surf, stars, nebula, games_played=0, unlocked=False):
         surf.fill(C_BG)
         nebula.draw(surf)
         stars.draw(surf)
@@ -83,6 +85,11 @@ class MenuScreen:
             "Survivez à la tempête quantique fractale.",
             f"Meilleur score :  {self.highscore:07d}",
         ]
+        if not unlocked:
+            sub_lines.append(f"Essais gratuits : {games_played}/{MAX_FREE_PLAYS}")
+        else:
+            sub_lines.append("Jeu Complet Débloqué !")
+            
         for i, line in enumerate(sub_lines):
             t = self.fonts["small"].render(line, True, C_WHITE if i == 0 else C_YELLOW)
             surf.blit(t, t.get_rect(center=(SCREEN_W//2, 200 + i*28)))
@@ -264,3 +271,64 @@ class GameOverScreen:
                                self.fonts["medium"], C_WHITE, y0 + 10)
         draw_text_centered(surf, "ÉCHAP  →  Menu principal",
                            self.fonts["small"], C_GREY, y0 + 44)
+
+
+class PaymentScreen:
+    def __init__(self, fonts):
+        self.fonts = fonts
+        self.t = 0
+        self.pay_url = None
+        self.payment_ref = None
+        self.status = "idle" # idle, loading, waiting, success, error
+        self.check_timer = 0
+        
+    def update(self, events):
+        self.t += 1
+        
+        if self.status == "waiting":
+            self.check_timer -= 1
+            if self.check_timer <= 0:
+                self.check_timer = 180 # Check every 3 seconds
+                if check_payment_status(self.payment_ref):
+                    self.status = "success"
+                    return "success"
+                    
+        for ev in events:
+            if ev.type == pygame.KEYDOWN:
+                if ev.key == pygame.K_ESCAPE:
+                    return "menu"
+                elif ev.key in (pygame.K_RETURN, pygame.K_SPACE) and self.status in ("idle", "error"):
+                    self.status = "loading"
+                    url, ref = init_payment()
+                    if url and ref:
+                        self.pay_url = url
+                        self.payment_ref = ref
+                        self.status = "waiting"
+                        webbrowser.open(url)
+                    else:
+                        self.status = "error"
+        return None
+
+    def draw(self, surf, stars, nebula):
+        surf.fill(C_BG)
+        nebula.draw(surf)
+        stars.draw(surf)
+        
+        draw_neon_text(surf, "JEU VERROUILLÉ", self.fonts["big"], C_RED, SCREEN_W//2, 150)
+        draw_text_centered(surf, "Vous avez atteint la limite de 3 parties gratuites.", self.fonts["medium"], C_WHITE, 220)
+        
+        if self.status == "idle":
+            draw_text_centered(surf, "[ ENTRÉE ou ESPACE pour Payer (2 TND) ]", self.fonts["medium"], C_GREEN, 320)
+        elif self.status == "loading":
+            draw_text_centered(surf, "Création du lien de paiement...", self.fonts["medium"], C_YELLOW, 320)
+        elif self.status == "waiting":
+            draw_text_centered(surf, "Paiement en cours dans le navigateur...", self.fonts["medium"], C_YELLOW, 300)
+            draw_text_centered(surf, "Vérification automatique en cours.", self.fonts["small"], C_GREY, 340)
+        elif self.status == "error":
+            draw_text_centered(surf, "Erreur de connexion à Konnect.", self.fonts["medium"], C_RED, 300)
+            draw_text_centered(surf, "[ ENTRÉE pour réessayer ]", self.fonts["medium"], C_GREEN, 340)
+        elif self.status == "success":
+            draw_text_centered(surf, "Paiement réussi ! Jeu débloqué.", self.fonts["medium"], C_GREEN, 320)
+            
+        draw_text_centered(surf, "ÉCHAP  →  Menu principal", self.fonts["small"], C_GREY, SCREEN_H - 50)
+

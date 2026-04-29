@@ -11,7 +11,7 @@ from src.effects  import StarField, Nebula, EffectManager
 from src.player   import Player
 from src.enemies  import Boss, SplitterEnemy, EnemyBullet
 from src.systems  import WaveManager, ScoreSystem, PowerUp, HUD
-from src.screens  import (MenuScreen, PauseScreen, WaveTransitionScreen, GameOverScreen)
+from src.screens  import (MenuScreen, PauseScreen, WaveTransitionScreen, GameOverScreen, PaymentScreen)
 
 
 class Game:
@@ -21,6 +21,7 @@ class Game:
     S_PAUSE      = "pause"
     S_WAVE_TRANS = "wave_trans"
     S_GAMEOVER   = "gameover"
+    S_PAYMENT    = "payment"
 
     def __init__(self):
         pygame.init()
@@ -41,6 +42,10 @@ class Game:
         # Persistance
         data = load_json(HIGHSCORE_FILE, {})
         self.highscore = data.get("highscore", 0)
+
+        settings = load_json(SETTINGS_FILE, {})
+        self.games_played = settings.get("games_played", 0)
+        self.unlocked = settings.get("unlocked", False)
 
         # Sons
         self.sounds = create_sounds()
@@ -63,6 +68,7 @@ class Game:
         self.pause_screen = PauseScreen(self.fonts)
         self.wave_screen  = WaveTransitionScreen(self.fonts)
         self.go_screen    = GameOverScreen(self.fonts)
+        self.payment_screen = PaymentScreen(self.fonts)
 
         self.state = self.S_MENU
         self.pause_hold_timer = 0
@@ -177,11 +183,15 @@ class Game:
             if result:
                 action, param = result
                 if action == "start":
-                    self.diff_speed = param
-                    self._init_session()
-                    self.state = self.S_PLAY
-                    self.snd("wave_start")
-                    self._start_bgm()
+                    if not self.unlocked and self.games_played >= MAX_FREE_PLAYS:
+                        self.state = self.S_PAYMENT
+                        self.payment_screen.status = "idle"
+                    else:
+                        self.diff_speed = param
+                        self._init_session()
+                        self.state = self.S_PLAY
+                        self.snd("wave_start")
+                        self._start_bgm()
 
         elif self.state == self.S_PLAY:
             self._update_play(events)
@@ -208,6 +218,15 @@ class Game:
                 self.snd("wave_start")
                 self._start_bgm()
             elif result == "menu":
+                self.state = self.S_MENU
+                
+        elif self.state == self.S_PAYMENT:
+            result = self.payment_screen.update(events)
+            if result == "menu":
+                self.state = self.S_MENU
+            elif result == "success":
+                self.unlocked = True
+                self._save_settings()
                 self.state = self.S_MENU
 
     def _update_play(self, events):
@@ -290,6 +309,10 @@ class Game:
 
         # Game over
         if self.player.lives <= 0:
+            if not self.unlocked:
+                self.games_played += 1
+                self._save_settings()
+                
             if self.score_sys.score > self.highscore:
                 self.highscore = self.score_sys.score
                 self.new_record = True
@@ -396,9 +419,13 @@ class Game:
         self.stars.draw(self.screen)
 
         if self.state == self.S_MENU:
-            self.menu_screen.draw(self.screen, self.stars, self.nebula)
+            self.menu_screen.draw(self.screen, self.stars, self.nebula, self.games_played, self.unlocked)
         else:
-            self._draw_gameplay()
+            if self.state == self.S_PAYMENT:
+                self.payment_screen.draw(self.screen, self.stars, self.nebula)
+            else:
+                self._draw_gameplay()
+                
             if self.state == self.S_PAUSE:
                 self.pause_screen.draw(self.screen)
             elif self.state == self.S_WAVE_TRANS:
@@ -450,6 +477,9 @@ class Game:
 
     def _save_highscore(self):
         save_json(HIGHSCORE_FILE, {"highscore": self.highscore})
+        
+    def _save_settings(self):
+        save_json(SETTINGS_FILE, {"games_played": self.games_played, "unlocked": self.unlocked})
 
     def _save_and_quit(self):
         self._save_highscore()
