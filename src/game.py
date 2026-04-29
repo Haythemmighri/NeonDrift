@@ -214,10 +214,14 @@ class Game:
         elif self.state == self.S_GAMEOVER:
             result = self.go_screen.update(events)
             if result == "restart":
-                self._init_session()
-                self.state = self.S_PLAY
-                self.snd("wave_start")
-                self._start_bgm()
+                if not self.unlocked and self.games_played >= MAX_FREE_PLAYS:
+                    self.state = self.S_PAYMENT
+                    self.payment_screen.status = "idle"
+                else:
+                    self._init_session()
+                    self.state = self.S_PLAY
+                    self.snd("wave_start")
+                    self._start_bgm()
             elif result == "menu":
                 self.state = self.S_MENU
                 
