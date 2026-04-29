@@ -83,7 +83,6 @@ class MenuScreen:
         # Sous-titre
         sub_lines = [
             "Survivez à la tempête quantique fractale.",
-            f"Meilleur score :  {self.highscore:07d}",
         ]
         if not unlocked:
             sub_lines.append(f"Essais gratuits : {games_played}/{MAX_FREE_PLAYS}")
@@ -93,6 +92,10 @@ class MenuScreen:
         for i, line in enumerate(sub_lines):
             t = self.fonts["small"].render(line, True, C_WHITE if i == 0 else C_YELLOW)
             surf.blit(t, t.get_rect(center=(SCREEN_W//2, 200 + i*28)))
+
+        # Meilleur score en haut à droite
+        score_text = self.fonts["medium"].render(f"Meilleur score : {self.highscore:07d}", True, C_YELLOW)
+        surf.blit(score_text, (SCREEN_W - score_text.get_width() - 20, 20))
 
         # Sélection de difficulté
         draw_text_centered(surf, "─── Difficulté ───", self.fonts["small"], C_GREY, 270)

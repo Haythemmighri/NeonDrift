@@ -10,6 +10,7 @@ from src.utils import (load_json, save_json, create_sounds, draw_neon_text,
 from src.effects  import StarField, Nebula, EffectManager
 from src.player   import Player, AllyGhost
 from src.enemies  import Boss, SplitterEnemy, EnemyBullet, GhostEnemy
+from src.database import init_db, save_score, get_highscore
 from src.systems  import WaveManager, ScoreSystem, PowerUp, HUD
 from src.screens  import (MenuScreen, PauseScreen, WaveTransitionScreen, GameOverScreen, PaymentScreen)
 
@@ -40,8 +41,8 @@ class Game:
         }
 
         # Persistance
-        data = load_json(HIGHSCORE_FILE, {})
-        self.highscore = data.get("highscore", 0)
+        init_db()
+        self.highscore = get_highscore()
 
         settings = load_json(SETTINGS_FILE, {})
         self.games_played = settings.get("games_played", 0)
@@ -203,7 +204,7 @@ class Game:
                 self.state = self.S_PLAY
             elif result == "menu":
                 self.state = self.S_MENU
-                self._save_highscore()
+                save_score(self.score_sys.score, self.wave_mgr.wave, self.player.kills)
                 self._stop_bgm()
 
         elif self.state == self.S_WAVE_TRANS:
@@ -330,7 +331,8 @@ class Game:
             if self.score_sys.score > self.highscore:
                 self.highscore = self.score_sys.score
                 self.new_record = True
-                self._save_highscore()
+                
+            save_score(self.score_sys.score, self.wave_mgr.wave, self.player.kills)
             self._stop_bgm()
             self._play_gameover_sound()
             self.fx.screen_flash(C_RED, alpha=120, decay=5)
@@ -496,13 +498,11 @@ class Game:
 
     # ── Persistance ──────────────────────────────────────────────────────
 
-    def _save_highscore(self):
-        save_json(HIGHSCORE_FILE, {"highscore": self.highscore})
-        
     def _save_settings(self):
         save_json(SETTINGS_FILE, {"games_played": self.games_played, "unlocked": self.unlocked})
 
     def _save_and_quit(self):
-        self._save_highscore()
+        if hasattr(self, 'score_sys') and self.state == self.S_PLAY:
+            save_score(self.score_sys.score, self.wave_mgr.wave, self.player.kills)
         pygame.quit()
         raise SystemExit

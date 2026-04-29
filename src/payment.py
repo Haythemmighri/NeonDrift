@@ -14,7 +14,6 @@ def init_payment(amount=2000):
         "amount": amount,
         "type": "immediate",
         "description": "Neon Drift Unlock",
-        "acceptedPaymentMethods": ["wallet", "bank_card", "e-DINAR"],
         "lifespan": 10,
         "checkoutForm": False,
         "addPaymentFeesToAmount": True,
