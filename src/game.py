@@ -8,8 +8,8 @@ from src.constants import *
 from src.utils import (load_json, save_json, create_sounds, draw_neon_text,
                         draw_text_centered, dist)
 from src.effects  import StarField, Nebula, EffectManager
-from src.player   import Player
-from src.enemies  import Boss, SplitterEnemy, EnemyBullet
+from src.player   import Player, AllyGhost
+from src.enemies  import Boss, SplitterEnemy, EnemyBullet, GhostEnemy
 from src.systems  import WaveManager, ScoreSystem, PowerUp, HUD
 from src.screens  import (MenuScreen, PauseScreen, WaveTransitionScreen, GameOverScreen, PaymentScreen)
 
@@ -92,6 +92,7 @@ class Game:
         self.boss      = None
         self.enemy_shoot_timer = 40
         self.new_record = False
+        self.ally_ghosts = []
 
     # ── Son ──────────────────────────────────────────────────────────────
 
@@ -227,7 +228,10 @@ class Game:
             elif result == "success":
                 self.unlocked = True
                 self._save_settings()
-                self.state = self.S_MENU
+                self._init_session()
+                self.state = self.S_PLAY
+                self.snd("wave_start")
+                self._start_bgm()
 
     def _update_play(self, events):
         # Pause
@@ -282,6 +286,12 @@ class Game:
         # Suivi boss actif
         active_bosses = [e for e in self.enemies if isinstance(e, Boss)]
         self.boss = active_bosses[0] if active_bosses else None
+
+        # Ally Ghosts
+        for ag in self.ally_ghosts:
+            ag.update(self.player.x, self.player.y)
+            self.p_bullets.extend(ag.get_bullets(self.enemies))
+        self.ally_ghosts = [ag for ag in self.ally_ghosts if ag.active]
 
         # Balles ennemies
         self.e_bullets.extend(new_e_bullets)
@@ -339,6 +349,8 @@ class Game:
                     b.active = False
                     destroyed = e.hit(b.damage)
                     if destroyed:
+                        if isinstance(e, GhostEnemy):
+                            self.ally_ghosts.append(AllyGhost(e.x, e.y))
                         self._on_enemy_killed(e)
                     else:
                         self.fx.sparks(e.x, e.y, e.color, 6)
@@ -352,6 +364,8 @@ class Game:
             if dist(px, py, e.x, e.y) < pr + e.radius - 4:
                 if self.player.has_shield:
                     e.active = False
+                    if isinstance(e, GhostEnemy):
+                        self.ally_ghosts.append(AllyGhost(e.x, e.y))
                     self._on_enemy_killed(e)
                     self.fx.screen_flash(C_CYAN, alpha=50)
                     self.snd("shield_hit")
@@ -456,6 +470,9 @@ class Game:
         # Power-ups
         for p in self.powerups:
             p.draw(self.screen, self.fonts["small"])
+        # Ally Ghosts
+        for ag in self.ally_ghosts:
+            ag.draw(self.screen)
         # Effets
         self.fx.draw(self.screen)
         # Joueur

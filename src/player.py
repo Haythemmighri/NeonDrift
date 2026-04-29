@@ -317,3 +317,77 @@ class Player:
             col = C_ORANGE if self.combo < 10 else C_MAGENTA
             t = fonts["medium"].render(f"x{self.combo} COMBO", True, col)
             surf.blit(t, (cx, SCREEN_H - 70))
+
+
+class AllyGhost:
+    def __init__(self, x, y):
+        self.x = float(x)
+        self.y = float(y)
+        self.radius = 15
+        self.color = C_PURPLE
+        self.timer = 30 * FPS  # 30 seconds
+        self.shoot_timer = 0
+        self.angle = 0.0
+        self.inner_angle = 0.0
+        self.active = True
+        
+        # Hover target offsets
+        self.hover_offset_x = random.randint(-60, -30)
+        self.hover_offset_y = random.randint(-40, 40)
+
+    def update(self, player_x, player_y):
+        self.timer -= 1
+        if self.timer <= 0:
+            self.active = False
+            return
+            
+        target_x = player_x + self.hover_offset_x
+        target_y = player_y + self.hover_offset_y
+        
+        self.x += (target_x - self.x) * 0.05
+        self.y += (target_y - self.y) * 0.05
+        
+        self.angle += 2.2
+        self.inner_angle -= 3.5
+        
+        if self.shoot_timer > 0:
+            self.shoot_timer -= 1
+
+    def get_bullets(self, enemies):
+        if self.shoot_timer <= 0 and enemies:
+            self.shoot_timer = 40
+            
+            # Target boss if exists, else closest enemy
+            bosses = [e for e in enemies if type(e).__name__ == 'Boss']
+            if bosses:
+                target = bosses[0]
+            else:
+                from src.utils import dist
+                target = min(enemies, key=lambda e: dist(self.x, self.y, e.x, e.y))
+            
+            from src.utils import angle_to
+            a = angle_to(self.x, self.y, target.x, target.y)
+            return [PlayerBullet(self.x, self.y, angle=a, color=C_PURPLE, speed=10, damage=1)]
+            
+        return []
+
+    def draw(self, surf):
+        # Fade out when about to disappear
+        alpha = 70
+        if self.timer < 120:
+            alpha = int(70 * (self.timer / 120))
+            if self.timer % 10 < 5:
+                return  # Blink effect
+                
+        draw_glow_circle(surf, self.color, (self.x, self.y), self.radius, alpha=alpha)
+        for i in range(8):
+            a = math.radians(self.angle + i * 45)
+            rx = self.x + math.cos(a) * (self.radius + 8)
+            ry = self.y + math.sin(a) * (self.radius + 8)
+            draw_glow_circle(surf, C_PURPLE, (rx, ry), 2, alpha=int(alpha*0.7), layers=1)
+        for i in range(4):
+            a = math.radians(self.inner_angle + i * 90)
+            rx = self.x + math.cos(a) * (self.radius - 4)
+            ry = self.y + math.sin(a) * (self.radius - 4)
+            pygame.draw.circle(surf, C_WHITE, (int(rx), int(ry)), 2)
+

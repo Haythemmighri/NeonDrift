@@ -296,8 +296,8 @@ class Boss(Enemy):
         self.wave = wave
         self.radius = 46
         self.color = C_RED
-        self.hp = self.MAX_HP_BASE + wave * 30
-        self.max_hp = self.hp
+        self.hp = 75
+        self.max_hp = 75
         self.score_value = SCORE_BOSS + wave * 50
         self.speed = 1.8
 
