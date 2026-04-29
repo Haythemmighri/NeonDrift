@@ -232,6 +232,7 @@ class MenuScreen:
 class PauseScreen:
     def __init__(self, fonts):
         self.fonts = fonts
+        self.escape_released = False
 
     def draw(self, surf):
         overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
@@ -247,14 +248,24 @@ class PauseScreen:
         for ev in events:
             if ev.type == pygame.KEYDOWN:
                 if ev.key in (pygame.K_p,):
+                    self.escape_released = False
                     return "resume", 0
+            elif ev.type == pygame.KEYUP:
+                if ev.key == pygame.K_ESCAPE and self.escape_released:
+                    if hold_timer < 120:
+                        self.escape_released = False
+                        return "resume", 0
+
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:
             hold_timer += 1
             if hold_timer >= 120:
+                self.escape_released = False
                 return "menu", 0
         else:
+            self.escape_released = True
             hold_timer = max(0, hold_timer - 2)
+            
         return None, hold_timer
 
 
